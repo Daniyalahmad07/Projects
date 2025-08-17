@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Package Retrieval System</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .shelf {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 20px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      max-width: 800px;
+      width: 100%;
+    }
+
+    .card {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      font-size: 1.2rem;
+      color: #333;
+      transition: all 0.3s ease;
+    }
+
+    .card.scanned {
+      background: #4CAF50;
+      color: white;
+      transform: scale(1.05);
+    }
+
+    .button-container {
+      margin-top: 20px;
+      display: flex;
+      gap: 15px;
+    }
+
+    .button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .reset-button {
+      background: #ff4757;
+    }
+
+    .reset-button:hover {
+      background: #ff6b81;
+    }
+
+    .visualize-button {
+      background: #1e90ff;
+    }
+
+    .visualize-button:hover {
+      background: #4682b4;
+    }
+
+    canvas {
+      margin-top: 20px;
+      background: white;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <h1>Smart Package Retrieval System</h1>
+
+  <div class="shelf">
+    <div class="card" id="tag1">Shelf 1</div>
+    <div class="card" id="tag2">Shelf 2</div>
+    <div class="card" id="tag3">Shelf 3</div>
+    <div class="card" id="tag4">Shelf 4</div>
+  </div>
+
+  <div class="button-container">
+    <button class="button reset-button" id="resetButton">Reset Shelf</button>
+    <button class="button visualize-button" id="visualizeButton">Visualize Data</button>
+  </div>
+
+  <canvas id="tagChart" width="400" height="200"></canvas>
+
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyA5r-XfG9z-yaxsFm8_XuYYBKWaGPkTgNU",
+      authDomain: "smart-package-retrieval-9973e.firebaseapp.com",
+      projectId: "smart-package-retrieval-9973e",
+      storageBucket: "smart-package-retrieval-9973e.firebasestorage.app",
+      messagingSenderId: "660680888173",
+      appId: "1:660680888173:web:d9f1406e0d207b10a9d464",
+      measurementId: "G-FC30ZSQHCN"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Listen for tag changes
+    db.collection("tags").onSnapshot((snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const tag = change.doc.data().tag;
+          const tagElement = document.getElementById(tag.toLowerCase());
+          if (tagElement) {
+            tagElement.classList.add("scanned");
+          }
+        }
+      });
+    });
+
+    // Reset button functionality
+    document.getElementById("resetButton").addEventListener("click", () => {
+      document.querySelectorAll(".card").forEach(card => card.classList.remove("scanned"));
+    });
+
+    // Data visualization button
+    document.getElementById("visualizeButton").addEventListener("click", () => {
+      db.collection("tags").orderBy("timestamp").get().then((querySnapshot) => {
+          const tagData = {}; // Store count per day
+  
+          querySnapshot.forEach((doc) => {
+              const data = doc.data();
+              console.log("Raw Data:", data); // Debugging: Check each document
+  
+              // ✅ FIX: Ensure timestamp is properly converted from Firestore
+              if (data.timestamp && data.timestamp.toDate) {
+                  const date = data.timestamp.toDate().toLocaleDateString(); // Convert to readable date
+                  tagData[date] = (tagData[date] || 0) + 1; // Count occurrences per day
+              } else {
+                  console.warn("⚠ Missing or invalid timestamp:", data);
+              }
+          });
+  
+          console.log("📊 Processed Data for Chart:", tagData); // Debugging: Check if dates & counts exist
+  
+          const labels = Object.keys(tagData); // Dates
+          const data = Object.values(tagData); // Counts
+  
+          if (labels.length === 0) {
+              alert("No tag scan data found!");
+              return;
+          }
+  
+          //  FIX: Ensure window.tagChart exists before calling destroy()
+          if (window.tagChart && typeof window.tagChart.destroy === "function") {
+              window.tagChart.destroy();
+          }
+  
+          const ctx = document.getElementById("tagChart").getContext("2d");
+          window.tagChart = new Chart(ctx, {
+              type: "bar", //  Set chart type to BAR
+              data: {
+                  labels: labels,
+                  datasets: [{
+                      label: "Number of Tags Scanned per Day",
+                      data: data,
+                      backgroundColor: "rgba(75, 192, 192, 0.6)",
+                      borderColor: "rgba(75, 192, 192, 1)",
+                      borderWidth: 1,
+                  }],
+              },
+              options: {
+                  responsive: true,
+                  scales: {
+                      y: { beginAtZero: true },
+                  },
+              },
+          });
+  
+      }).catch(error => {
+          console.error("Error fetching data:", error);
+      });
+  });
+  
+</script>
+
+</body>
+</html>
