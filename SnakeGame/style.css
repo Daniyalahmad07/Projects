@@ -1,0 +1,54 @@
+/* General layout */
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  height: 100vh;
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #111;
+  color: #fff;
+  text-align: center;
+}
+
+h1 {
+  margin: 20px 0 10px;
+}
+
+.scoreboard {
+  display: flex;
+  justify-content: space-around;
+  width: 300px;
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+/* Canvas styling */
+#gameCanvas {
+  background: #222;
+  border: 2px solid #555;
+  display: block;
+}
+
+/* Grid-like feel by overlaying subtle square patterns */
+#gameCanvas {
+  background-image: linear-gradient(#333 1px, transparent 1px),
+                    linear-gradient(90deg, #333 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Game over screen */
+#gameOverScreen {
+  margin-top: 15px;
+}
+
+.hidden {
+  display: none;
+}
+
+button {
+  padding: 5px 15px;
+  font-size: 16px;
+  cursor: pointer;
+}
